@@ -1,5 +1,4 @@
 import copy
-import sys
 import random
 import numpy as np
 import tkinter as tk
@@ -19,17 +18,15 @@ class Board:
         self.size = size
         self.squares = np.zeros((size, size))
         self.marked_sqrs = 0
-        self.max_item_win = 5 if size == 5 else (4 if size == 7 else 3)
+        self.max_item_win = 5 if size > 5 else 3
 
     def final_state(self, marked_row, marked_col):
         directions = [(1, 0), (0, 1), (1, 1), (1, -1)]  # vertical, horizontal, main diagonal, anti-diagonal
-
         for dr, dc in directions:
             count = 0
             for delta in range(-self.max_item_win + 1, self.max_item_win):
                 r = marked_row + delta * dr
                 c = marked_col + delta * dc
-
                 if 0 <= r < self.size and 0 <= c < self.size:
                     if self.squares[r][c] == self.squares[marked_row][marked_col]:
                         count += 1
@@ -37,7 +34,6 @@ class Board:
                             return self.squares[marked_row][marked_col]
                     else:
                         count = 0
-
         return 0
 
     def mark_sqr(self, row, col, player):
@@ -53,7 +49,6 @@ class Board:
 
     def is_full(self):
         return self.marked_sqrs == self.size * self.size
-
 
 class AI:
     def __init__(self, level=1, player=2):
@@ -103,13 +98,11 @@ class AI:
     def evaluate_position(self, board, row, col, player):
         score = 0
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
-
         for dr, dc in directions:
             count = 0
-            for delta in range(-3, 1):  # Check 4 consecutive squares in each direction
+            for delta in range(-3, 1):
                 r = row + delta * dr
                 c = col + delta * dc
-
                 if 0 <= r < board.size and 0 <= c < board.size:
                     if board.squares[r][c] == player:
                         count += 1
@@ -119,9 +112,7 @@ class AI:
                 else:
                     count = 0
                     break
-
             score += count
-
         return score
 
     def evaluate_board(self, board):
@@ -139,17 +130,13 @@ class AI:
             move = self.rnd(main_board)
         else:
             _, move = self.alpha_beta(main_board, -99999, 99999, True, 3)
-        print(f'AI has chosen to mark the square in pos {move} with an eval of: {eval}')
         return move
-
 
 class Game(tk.Tk):
     def __init__(self):
         super().__init__()
-
-        self.title("TIC TAC TOE AI")
+        self.title("Classic Caro")
         self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT}")
-
         self.canvas = tk.Canvas(self, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT, bg=BG_COLOR)
         self.canvas.pack()
 
@@ -167,10 +154,8 @@ class Game(tk.Tk):
         self.gamemode = 'ai'
         self.running = True
         self.show_lines()
-
         self.create_menu()
         self.canvas.bind("<Button-1>", self.handle_click)
-        self.bind("<Key>", self.handle_keypress)
 
     def create_menu(self):
         menu_frame = tk.Frame(self)
@@ -265,7 +250,6 @@ class Game(tk.Tk):
     def handle_click(self, event):
         col = event.x // self.sqsize
         row = event.y // self.sqsize
-
         if self.board.empty_sqr(row, col) and self.running:
             self.make_move(row, col)
             if self.is_over(row, col):
@@ -275,19 +259,6 @@ class Game(tk.Tk):
                 self.make_move(row, col)
                 if self.is_over(row, col):
                     self.running = False
-
-    def handle_keypress(self, event):
-        if event.char == 'g':
-            self.change_gamemode()
-        if event.char == 'r':
-            self.reset()
-        if event.char == '0':
-            self.ai.level = 0
-        if event.char == '1':
-            self.ai.level = 1
-        if event.char == '2':
-            self.ai.level = 2
-
 
 if __name__ == '__main__':
     game = Game()
