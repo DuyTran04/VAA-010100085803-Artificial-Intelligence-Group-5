@@ -3,12 +3,13 @@ import sys
 import random
 import numpy as np
 import tkinter as tk
+from tkinter import messagebox
 
 # --- Constants ---
 WIDTH = 700
 HEIGHT = 700
 
-SIZE_BOARD = 15
+SIZE_BOARD = 11
 ROWS = SIZE_BOARD
 COLS = SIZE_BOARD
 
@@ -227,7 +228,15 @@ class Game(tk.Tk):
         self.gamemode = 'ai' if self.gamemode == 'pvp' else 'pvp'
 
     def is_over(self, row, col):
-        return self.board.final_state(row, col) != 0 or self.board.is_full()
+        result = self.board.final_state(row, col)
+        if result != 0:
+            winner = "Player 1" if result == 1 else "Player 2"
+            messagebox.showinfo("Game Over", f"{winner} wins!")
+            return True
+        elif self.board.is_full():
+            messagebox.showinfo("Game Over", "It's a draw!")
+            return True
+        return False
 
     def reset(self):
         self.canvas.delete("all")
