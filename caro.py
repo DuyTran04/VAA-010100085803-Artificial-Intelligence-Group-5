@@ -150,7 +150,7 @@ class AI:
 class Game(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Classic Caro")
+        self.title("CARO CỔ ĐIỂN")
         self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT}")
         self.canvas = tk.Canvas(self, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT, bg=BG_COLOR)
         self.canvas.pack()
