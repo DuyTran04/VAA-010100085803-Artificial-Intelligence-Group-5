@@ -5,15 +5,15 @@ import tkinter as tk
 from tkinter import messagebox
 
 # --- Constants ---
-DEFAULT_WIDTH = 700  # Chiều rộng mặc định của cửa sổ 
-DEFAULT_HEIGHT = 700  # Chiều cao mặc định của cửa sổ 
+DEFAULT_WIDTH = 700     #Chiều rộng
+DEFAULT_HEIGHT = 700    #Chiều cao
 
-BG_COLOR = "#F5F5DC"  # Beige background color
-LINE_COLOR = "#8B4513"  # Dark Brown line color
-CIRC_COLOR = "#006400"  # Dark Green circle (O) color
-CROSS_COLOR = "#8B0000"  # Dark Red cross (X) color
+BG_COLOR = "#F5F5DC" # Beige background color
+LINE_COLOR = "#8B4513" # Dark Brown line color
+CIRC_COLOR = "#006400" # Dark Green circle (O) color
+CROSS_COLOR = "#8B0000" # Dark Red cross (X) color
 
-# Class Board định nghĩa bảng caro
+# Bảng caro
 class Board:
     def __init__(self, size):
         self.size = size
@@ -22,8 +22,7 @@ class Board:
         self.max_item_win = 5 if size > 5 else 3
 
     def final_state(self, marked_row, marked_col):
-        # Kiểm tra trạng thái kết thúc của trò chơi
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]  # vertical, horizontal, main diagonal, anti-diagonal
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
         for dr, dc in directions:
             count = 0
             for delta in range(-self.max_item_win + 1, self.max_item_win):
@@ -39,7 +38,6 @@ class Board:
         return 0
 
     def mark_sqr(self, row, col, player):
-        # Đánh dấu ô bởi người chơi
         self.squares[row][col] = player
         self.marked_sqrs += 1
 
@@ -49,14 +47,12 @@ class Board:
 
     def get_empty_sqrs(self):
         # Lấy danh sách các ô trống
-        empty_sqrs = [(r, c) for r in range(self.size) for c in range(self.size) if self.empty_sqr(r, c)]
-        return empty_sqrs
+        return [(r, c) for r in range(self.size) for c in range(self.size) if self.empty_sqr(r, c)]
 
     def is_full(self):
         # Kiểm tra xem bảng có đầy đủ chưa
         return self.marked_sqrs == self.size * self.size
-
-# Class AI định nghĩa trí tuệ nhân tạo
+#Artificial Intelligence
 class AI:
     def __init__(self, player=2):
         self.player = player
@@ -65,7 +61,8 @@ class AI:
         # Chọn ngẫu nhiên một ô trống
         empty_sqrs = board.get_empty_sqrs()
         return random.choice(empty_sqrs)
-
+    
+    #Minimax algorithm with Alpha–beta pruning
     def minimax(self, board, depth, alpha, beta, maximizing):
         if depth == 0 or board.is_full():
             return self.evaluate_board(board), None
@@ -76,7 +73,7 @@ class AI:
             empty_sqrs = board.get_empty_sqrs()
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, 1)  # AI is maximizing player
+                temp_board.mark_sqr(row, col, 1)
                 eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, False)
                 if eval > max_eval:
                     max_eval = eval
@@ -101,7 +98,7 @@ class AI:
             return min_eval, best_move
 
     def evaluate_position(self, board, row, col, player):
-        # Đánh giá vị trí trên bảng
+         # Đánh vị trí bảng
         score = 0
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
         for dr, dc in directions:
@@ -122,7 +119,7 @@ class AI:
         return score
 
     def evaluate_board(self, board):
-        # Đánh giá toàn bộ bảng
+        #Đánh toàn bộ bảng
         score = 0
         for row in range(board.size):
             for col in range(board.size):
@@ -133,7 +130,7 @@ class AI:
         return score
 
     def eval(self, main_board):
-        # Adjust depth based on board size
+        #Điều chỉnh kích thước 
         if main_board.size == 5:
             depth = 3
         elif main_board.size == 7:
@@ -142,20 +139,18 @@ class AI:
             depth = 1
 
         eval_value, move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
-        # In ra vị trí ô được chọn và giá trị đánh giá của nước đi đó
         print(f'AI đã chọn đánh dấu ô ở vị trí {move} với giá trị đánh là: {eval_value}')
         return move
 
-# Class Game định nghĩa giao diện và logic của trò chơi
 class Game(tk.Tk):
-    def __init__(self):
+    def __init__(self, size=5, gamemode='ai'):
         super().__init__()
         self.title("CARO CỔ ĐIỂN")
-        self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT}")
+        self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT + 100}")  # Increase height to accommodate buttons
         self.canvas = tk.Canvas(self, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT, bg=BG_COLOR)
         self.canvas.pack()
 
-        self.size = 5
+        self.size = size
         self.sqsize = DEFAULT_WIDTH // self.size
         self.radius = self.sqsize // 4
         self.offset = self.sqsize // 4
@@ -164,57 +159,20 @@ class Game(tk.Tk):
         self.cross_width = self.offset // 2
 
         self.board = Board(self.size)
-        self.ai = AI()  # AI instance with Minimax and Alpha-Beta pruning
+        self.ai = AI()
         self.player = 1
-        self.gamemode = 'ai'
+        self.gamemode = gamemode
         self.running = True
         self.ai_thinking = False
         self.show_lines()
-        self.create_menu()
         self.canvas.bind("<Button-1>", self.handle_click)
 
-    def create_menu(self):
-        # Tạo menu chọn chế độ và kích thước bảng
-        menu_frame = tk.Frame(self)
-        menu_frame.pack(side=tk.TOP)
+        # Reset button and Back button
+        self.reset_button = tk.Button(self, text="Reset", command=self.reset, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.reset_button.pack(side=tk.LEFT, padx=20, pady=20)
 
-        mode_label = tk.Label(menu_frame, text="Mode:")
-        mode_label.pack(side=tk.LEFT)
-
-        self.mode_var = tk.StringVar(value="ai")
-        pvp_radio = tk.Radiobutton(menu_frame, text="Player vs Player", variable=self.mode_var, value="pvp", command=self.change_gamemode)
-        pvp_radio.pack(side=tk.LEFT)
-        ai_radio = tk.Radiobutton(menu_frame, text="Player vs AI", variable=self.mode_var, value="ai", command=self.change_gamemode)
-        ai_radio.pack(side=tk.LEFT)
-
-        size_label = tk.Label(menu_frame, text="Board Size:")
-        size_label.pack(side=tk.LEFT)
-
-        self.size_var = tk.IntVar(value=5)
-        size5_radio = tk.Radiobutton(menu_frame, text="5x5", variable=self.size_var, value=5, command=self.change_size)
-        size5_radio.pack(side=tk.LEFT)
-        size7_radio = tk.Radiobutton(menu_frame, text="7x7", variable=self.size_var, value=7, command=self.change_size)
-        size7_radio.pack(side=tk.LEFT)
-        size11_radio = tk.Radiobutton(menu_frame, text="11x11", variable=self.size_var, value=11, command=self.change_size)
-        size11_radio.pack(side=tk.LEFT)
-
-        reset_button = tk.Button(menu_frame, text="Reset", command=self.reset)
-        reset_button.pack(side=tk.LEFT)
-
-    def change_gamemode(self):
-        # Thay đổi chế độ chơi
-        self.gamemode = self.mode_var.get()
-
-    def change_size(self):
-        # Thay đổi kích thước bảng
-        self.size = self.size_var.get()
-        self.sqsize = DEFAULT_WIDTH // self.size
-        self.radius = self.sqsize // 4
-        self.offset = self.sqsize // 4
-        self.line_width = self.offset // 2
-        self.circ_width = self.offset // 2
-        self.cross_width = self.offset // 2
-        self.reset()
+        self.back_button = tk.Button(self, text="Back", command=self.back, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.back_button.pack(side=tk.RIGHT, padx=20, pady=20)
 
     def show_lines(self):
         # Hiển thị các đường kẻ trên bảng
@@ -243,7 +201,6 @@ class Game(tk.Tk):
                                     outline=CIRC_COLOR, width=self.circ_width)
 
     def make_move(self, row, col):
-        # Thực hiện nước đi
         self.board.mark_sqr(row, col, self.player)
         self.draw_fig(row, col)
         self.next_turn()
@@ -264,17 +221,8 @@ class Game(tk.Tk):
             return True
         return False
 
-    def reset(self):
-        # Đặt lại trò chơi
-        self.board = Board(self.size)
-        self.ai = AI()
-        self.player = 1
-        self.running = True
-        self.ai_thinking = False
-        self.show_lines()
-
     def handle_click(self, event):
-        # Xử lý sự kiện click chuột
+        #Xử lý sự kiện click chuột
         if not self.running or self.ai_thinking:
             return
         col = event.x // self.sqsize
@@ -285,16 +233,29 @@ class Game(tk.Tk):
                 self.running = False
             elif self.gamemode == 'ai' and self.running and self.player == 2:
                 self.ai_thinking = True
-                self.after(500, self.ai_move)  # Delay AI move by 500ms
+                self.after(500, self.ai_move)
 
     def ai_move(self):
-        # AI move logic
         if self.running and self.player == 2:
             row, col = self.ai.eval(self.board)
             self.make_move(row, col)
             if self.is_over(row, col):
                 self.running = False
         self.ai_thinking = False
+
+    def reset(self):
+        self.board = Board(self.size)
+        self.player = 1
+        self.running = True
+        self.ai_thinking = False
+        self.show_lines()
+
+    def back(self):
+        self.destroy()
+        import caro_menu  # Quan lại form menu
+        root = tk.Tk()
+        caro_menu.CaroUI(root)
+        root.mainloop()
 
 if __name__ == '__main__':
     game = Game()
