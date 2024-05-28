@@ -17,12 +17,12 @@ CROSS_COLOR = "#8B0000" # Dark Red cross (X) color
 class Board:
     def __init__(self, size):
         self.size = size
-        self.squares = np.zeros((size, size))
-        self.marked_sqrs = 0
-        self.max_item_win = 5 if size > 5 else 3
+        self.squares = np.zeros((size, size))  # Tạo bảng kích thước size x size với các ô giá trị 0
+        self.marked_sqrs = 0  # Số ô đã được đánh dấu
+        self.max_item_win = 5 if size > 5 else 3  # Số lượng ký hiệu cần để thắng (5 cho bàn lớn hơn 5x5, 3 cho bàn nhỏ)
 
     def final_state(self, marked_row, marked_col):
-        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]  # Các hướng kiểm tra (dọc, ngang, chéo phải, chéo trái)
         for dr, dc in directions:
             count = 0
             for delta in range(-self.max_item_win + 1, self.max_item_win):
@@ -32,12 +32,13 @@ class Board:
                     if self.squares[r][c] == self.squares[marked_row][marked_col]:
                         count += 1
                         if count == self.max_item_win:
-                            return self.squares[marked_row][marked_col]
+                            return self.squares[marked_row][marked_col] 
                     else:
                         count = 0
         return 0
 
     def mark_sqr(self, row, col, player):
+         # Đánh dấu ô với giá trị của người chơi
         self.squares[row][col] = player
         self.marked_sqrs += 1
 
@@ -52,10 +53,11 @@ class Board:
     def is_full(self):
         # Kiểm tra xem bảng có đầy đủ chưa
         return self.marked_sqrs == self.size * self.size
+    
 #Artificial Intelligence
 class AI:
     def __init__(self, player=2):
-        self.player = player
+        self.player = player # Người chơi mà AI sẽ đóng vai
 
     def rnd(self, board):
         # Chọn ngẫu nhiên một ô trống
@@ -151,21 +153,21 @@ class Game(tk.Tk):
         self.canvas.pack()
 
         self.size = size
-        self.sqsize = DEFAULT_WIDTH // self.size
-        self.radius = self.sqsize // 4
-        self.offset = self.sqsize // 4
-        self.line_width = self.offset // 2
-        self.circ_width = self.offset // 2
-        self.cross_width = self.offset // 2
+        self.sqsize = DEFAULT_WIDTH // self.size  # Kích thước mỗi ô vuông trên bảng
+        self.radius = self.sqsize // 4 # Bán kính của dấu tròn (O)
+        self.offset = self.sqsize // 4  # Khoảng cách bù trừ cho việc vẽ dấu
+        self.line_width = self.offset // 2 # Độ dày của các đường kẻ
+        self.circ_width = self.offset // 2  # Độ dày của đường kẻ dấu tròn (O)
+        self.cross_width = self.offset // 2 # Độ dày của đường kẻ dấu chéo (X)
 
-        self.board = Board(self.size)
-        self.ai = AI()
-        self.player = 1
-        self.gamemode = gamemode
-        self.running = True
-        self.ai_thinking = False
-        self.show_lines()
-        self.canvas.bind("<Button-1>", self.handle_click)
+        self.board = Board(self.size) # Tạo bảng chơi với kích thước được chỉ định
+        self.ai = AI() # Tạo đối tượng AI
+        self.player = 1 # Người chơi bắt đầu
+        self.gamemode = gamemode # Chế độ chơi (Player vs Player or Player vs A.I)
+        self.running = True # Trạng thái trò chơi đang chạy
+        self.ai_thinking = False  # Trạng thái AI đang suy nghĩ
+        self.show_lines() # Hiển thị các đường kẻ trên bảng
+        self.canvas.bind("<Button-1>", self.handle_click) # Ràng buộc sự kiện click chuột trên canvas
 
         # Reset button and Back button
         self.reset_button = tk.Button(self, text="Reset", command=self.reset, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
@@ -252,7 +254,7 @@ class Game(tk.Tk):
 
     def back(self):
         self.destroy()
-        import caro_menu  # Quan lại form menu
+        import caro_menu  # Quay lại form menu
         root = tk.Tk()
         caro_menu.CaroUI(root)
         root.mainloop()
