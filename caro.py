@@ -58,8 +58,7 @@ class Board:
 
 # Class AI định nghĩa trí tuệ nhân tạo
 class AI:
-    def __init__(self, level=1, player=2):
-        self.level = level
+    def __init__(self, player=2):
         self.player = player
 
     def rnd(self, board):
@@ -67,35 +66,32 @@ class AI:
         empty_sqrs = board.get_empty_sqrs()
         return random.choice(empty_sqrs)
 
-    def alpha_beta(self, board, alpha, beta, maximizing, depth=3):
-        # Thuật toán Alpha-Beta để tìm nước đi tốt nhất
+    def minimax(self, board, depth, alpha, beta, maximizing):
         if depth == 0 or board.is_full():
             return self.evaluate_board(board), None
 
         best_move = None
         if maximizing:
-            max_eval = -99999
+            max_eval = -float('inf')
             empty_sqrs = board.get_empty_sqrs()
-
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, 1)
-                eval, _ = self.alpha_beta(temp_board, alpha, beta, False, depth - 1)
+                temp_board.mark_sqr(row, col, 1)  # AI is maximizing player
+                eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, False)
                 if eval > max_eval:
                     max_eval = eval
                     best_move = (row, col)
                 alpha = max(alpha, eval)
-                if alpha >= beta:
+                if beta <= alpha:
                     break
             return max_eval, best_move
         else:
-            min_eval = 99999
+            min_eval = float('inf')
             empty_sqrs = board.get_empty_sqrs()
-
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
                 temp_board.mark_sqr(row, col, self.player)
-                eval, _ = self.alpha_beta(temp_board, alpha, beta, True, depth - 1)
+                eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, True)
                 if eval < min_eval:
                     min_eval = eval
                     best_move = (row, col)
@@ -137,13 +133,17 @@ class AI:
         return score
 
     def eval(self, main_board):
-        # Đánh giá và chọn nước đi tốt nhất
-        if self.level == 0:
-            move = self.rnd(main_board)
+        # Adjust depth based on board size
+        if main_board.size == 5:
+            depth = 3
+        elif main_board.size == 7:
+            depth = 2
         else:
-            eval_value, move = self.alpha_beta(main_board, -99999, 99999, True, 3)
-            # In ra vị trí ô được chọn và giá trị đánh giá của nước đi đó
-            print(f'AI đã chọn đánh dấu ô ở vị trí {move} với giá trị đánh là: {eval_value}')
+            depth = 1
+
+        eval_value, move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
+        # In ra vị trí ô được chọn và giá trị đánh giá của nước đi đó
+        print(f'AI đã chọn đánh dấu ô ở vị trí {move} với giá trị đánh là: {eval_value}')
         return move
 
 # Class Game định nghĩa giao diện và logic của trò chơi
@@ -164,7 +164,7 @@ class Game(tk.Tk):
         self.cross_width = self.offset // 2
 
         self.board = Board(self.size)
-        self.ai = AI()
+        self.ai = AI()  # AI instance with Minimax and Alpha-Beta pruning
         self.player = 1
         self.gamemode = 'ai'
         self.running = True
@@ -275,15 +275,20 @@ class Game(tk.Tk):
         # Xử lý sự kiện click chuột
         col = event.x // self.sqsize
         row = event.y // self.sqsize
-        if self.board.empty_sqr(row, col) and self.running:
+        if self.board.empty_sqr(row, col) and self.running and self.player == 1:
             self.make_move(row, col)
             if self.is_over(row, col):
                 self.running = False
-            if self.gamemode == 'ai' and self.player == self.ai.player and self.running:
-                row, col = self.ai.eval(self.board)
-                self.make_move(row, col)
-                if self.is_over(row, col):
-                    self.running = False
+            if self.gamemode == 'ai' and self.running:
+                self.after(500, self.ai_move)  # Delay AI move by 500ms
+
+    def ai_move(self):
+        # AI move logic
+        if self.running and self.player == 2:
+            row, col = self.ai.eval(self.board)
+            self.make_move(row, col)
+            if self.is_over(row, col):
+                self.running = False
 
 if __name__ == '__main__':
     game = Game()
