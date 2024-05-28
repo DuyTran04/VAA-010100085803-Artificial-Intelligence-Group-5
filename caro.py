@@ -8,10 +8,10 @@ from tkinter import messagebox
 DEFAULT_WIDTH = 700  # Chiều rộng mặc định của cửa sổ 
 DEFAULT_HEIGHT = 700  # Chiều cao mặc định của cửa sổ 
 
-BG_COLOR = "#1CAAA8"  # Màu nền
-LINE_COLOR = "#179187"  # Màu của các đường kẻ 
-CIRC_COLOR = "#EFE7C8"  # Màu của hình tròn (O)
-CROSS_COLOR = "#424242"  # Màu của hình chữ thập (X)
+BG_COLOR = "#F5F5DC"  # Beige background color
+LINE_COLOR = "#8B4513"  # Dark Brown line color
+CIRC_COLOR = "#006400"  # Dark Green circle (O) color
+CROSS_COLOR = "#8B0000"  # Dark Red cross (X) color
 
 # Class Board định nghĩa bảng caro
 class Board:
@@ -168,6 +168,7 @@ class Game(tk.Tk):
         self.player = 1
         self.gamemode = 'ai'
         self.running = True
+        self.ai_thinking = False
         self.show_lines()
         self.create_menu()
         self.canvas.bind("<Button-1>", self.handle_click)
@@ -227,7 +228,7 @@ class Game(tk.Tk):
 
     def draw_fig(self, row, col):
         # Vẽ ký hiệu X hoặc O
-        if self.player == 1:
+        if self.board.squares[row][col] == 1:
             start_desc = (col * self.sqsize + self.offset, row * self.sqsize + self.offset)
             end_desc = (col * self.sqsize + self.sqsize - self.offset, row * self.sqsize + self.sqsize - self.offset)
             self.canvas.create_line(*start_desc, *end_desc, fill=CROSS_COLOR, width=self.cross_width)
@@ -235,7 +236,7 @@ class Game(tk.Tk):
             start_asc = (col * self.sqsize + self.offset, row * self.sqsize + self.sqsize - self.offset)
             end_asc = (col * self.sqsize + self.sqsize - self.offset, row * self.sqsize + self.offset)
             self.canvas.create_line(*start_asc, *end_asc, fill=CROSS_COLOR, width=self.cross_width)
-        elif self.player == 2:
+        elif self.board.squares[row][col] == 2:
             center = (col * self.sqsize + self.sqsize // 2, row * self.sqsize + self.sqsize // 2)
             self.canvas.create_oval(center[0] - self.radius, center[1] - self.radius,
                                     center[0] + self.radius, center[1] + self.radius,
@@ -269,17 +270,21 @@ class Game(tk.Tk):
         self.ai = AI()
         self.player = 1
         self.running = True
+        self.ai_thinking = False
         self.show_lines()
 
     def handle_click(self, event):
         # Xử lý sự kiện click chuột
+        if not self.running or self.ai_thinking:
+            return
         col = event.x // self.sqsize
         row = event.y // self.sqsize
-        if self.board.empty_sqr(row, col) and self.running and self.player == 1:
+        if self.board.empty_sqr(row, col):
             self.make_move(row, col)
             if self.is_over(row, col):
                 self.running = False
-            if self.gamemode == 'ai' and self.running:
+            elif self.gamemode == 'ai' and self.running and self.player == 2:
+                self.ai_thinking = True
                 self.after(500, self.ai_move)  # Delay AI move by 500ms
 
     def ai_move(self):
@@ -289,6 +294,7 @@ class Game(tk.Tk):
             self.make_move(row, col)
             if self.is_over(row, col):
                 self.running = False
+        self.ai_thinking = False
 
 if __name__ == '__main__':
     game = Game()
