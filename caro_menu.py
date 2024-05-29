@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import font as tkfont
 from caro import Game
 
-class CaroMenu:
+class CaroUI:
     def __init__(self, root):
         self.root = root
         self.root.title("CARO CỔ ĐIỂN")
@@ -67,5 +67,5 @@ class CaroMenu:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    ui = CaroMenu(root)
+    ui = CaroUI(root)
     root.mainloop()
