@@ -170,10 +170,10 @@ class Game(tk.Tk):
         self.canvas.bind("<Button-1>", self.handle_click) # Ràng buộc sự kiện click chuột trên canvas
 
         # Reset button and Back button
-        self.reset_button = tk.Button(self, text="Reset", command=self.reset, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.reset_button = tk.Button(self, text="Chơi lại", command=self.reset, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
         self.reset_button.pack(side=tk.LEFT, padx=20, pady=20)
 
-        self.back_button = tk.Button(self, text="Back", command=self.back, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.back_button = tk.Button(self, text="Trở về", command=self.back, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
         self.back_button.pack(side=tk.RIGHT, padx=20, pady=20)
 
     def show_lines(self):
@@ -215,11 +215,11 @@ class Game(tk.Tk):
         # Kiểm tra trò chơi kết thúc hay chưa
         result = self.board.final_state(row, col)
         if result != 0:
-            winner = "Player 1" if result == 1 else "Player 2"
-            messagebox.showinfo("Game Over", f"{winner} wins!")
+            winner = "Người chơi 1" if result == 1 else "Người chơi 2"
+            messagebox.showinfo("Kết quả", f"{winner} đã thắng")
             return True
         elif self.board.is_full():
-            messagebox.showinfo("Game Over", "It's a draw!")
+            messagebox.showinfo("Kết quả", "Hòa")
             return True
         return False
 
