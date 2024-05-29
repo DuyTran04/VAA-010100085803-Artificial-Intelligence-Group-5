@@ -2,7 +2,7 @@ import tkinter as tk
 from tkinter import font as tkfont
 from caro import Game
 
-class CaroUI:
+class CaroMenu:
     def __init__(self, root):
         self.root = root
         self.root.title("CARO CỔ ĐIỂN")
@@ -19,11 +19,11 @@ class CaroUI:
         self.custom_font = tkfont.Font(family="Helvetica", size=12, weight="bold") #Font-size tùy chỉnh
         
         # Tiêu đề
-        self.label = tk.Label(root, text="WELCOME TO CARO GAME", font=("Helvetica", 24, "bold"), fg=self.text_color, bg=self.bg_color)
+        self.label = tk.Label(root, text="CHÀO MỪNG ĐẾN CỜ CARO", font=("Helvetica", 24, "bold"), fg=self.text_color, bg=self.bg_color)
         self.label.pack(pady=20)
         
         # Chọn kích thước bàn cờ
-        self.size_label = tk.Label(root, text="Choose Board Size:", font=self.custom_font, fg=self.text_color, bg=self.bg_color)
+        self.size_label = tk.Label(root, text="Chọn kích thước bàn cờ:", font=self.custom_font, fg=self.text_color, bg=self.bg_color)
         self.size_label.pack(pady=10)
         
         self.size_var = tk.IntVar(value=5)
@@ -37,21 +37,21 @@ class CaroUI:
         self.size11_radio.pack(side=tk.LEFT, padx=10)
         
         # Chọn chế độ chơi
-        self.mode_label = tk.Label(root, text="Choose Mode:", font=self.custom_font, fg=self.text_color, bg=self.bg_color)
+        self.mode_label = tk.Label(root, text="Chọn chế độ chơi", font=self.custom_font, fg=self.text_color, bg=self.bg_color)
         self.mode_label.pack(pady=10)
         self.mode_var = tk.StringVar(value="ai")
         self.mode_frame = tk.Frame(root, bg=self.bg_color)
         self.mode_frame.pack()
-        self.pvp_radio = tk.Radiobutton(self.mode_frame, text="Player vs Player", variable=self.mode_var, value="pvp", font=self.custom_font, fg=self.text_color, bg=self.bg_color, selectcolor=self.bg_color)
-        self.ai_radio = tk.Radiobutton(self.mode_frame, text="Player vs AI", variable=self.mode_var, value="ai", font=self.custom_font, fg=self.text_color, bg=self.bg_color, selectcolor=self.bg_color)
+        self.pvp_radio = tk.Radiobutton(self.mode_frame, text="Người đấu Người", variable=self.mode_var, value="pvp", font=self.custom_font, fg=self.text_color, bg=self.bg_color, selectcolor=self.bg_color)
+        self.ai_radio = tk.Radiobutton(self.mode_frame, text="Người đấu A.I", variable=self.mode_var, value="ai", font=self.custom_font, fg=self.text_color, bg=self.bg_color, selectcolor=self.bg_color)
         self.pvp_radio.pack(side=tk.LEFT, padx=10)
         self.ai_radio.pack(side=tk.LEFT, padx=10)
 
         # Nút bắt đầu và thoát
-        self.start_button = tk.Button(root, text="Start Game", command=self.start_game, font=self.custom_font, fg=self.button_text_color, bg=self.button_color)
+        self.start_button = tk.Button(root, text="Bắt đầu chơi", command=self.start_game, font=self.custom_font, fg=self.button_text_color, bg=self.button_color)
         self.start_button.pack(pady=20)
         
-        self.exit_button = tk.Button(root, text="Exit", command=self.exit_game, font=self.custom_font, fg=self.button_text_color, bg=self.button_color)
+        self.exit_button = tk.Button(root, text="Thoát", command=self.exit_game, font=self.custom_font, fg=self.button_text_color, bg=self.button_color)
         self.exit_button.pack(pady=5)
 
     def start_game(self):
@@ -67,5 +67,5 @@ class CaroUI:
 
 if __name__ == "__main__":
     root = tk.Tk()
-    ui = CaroUI(root)
+    ui = CaroMenu(root)
     root.mainloop()
