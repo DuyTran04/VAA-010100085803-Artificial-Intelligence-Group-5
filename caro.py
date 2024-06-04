@@ -141,7 +141,7 @@ class AI:
             depth = 1
 
         eval_value, move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
-        print(f'AI đã chọn đánh dấu ô ở vị trí {move} với giá trị đánh là: {eval_value}')
+        
         return move
 
 class Game(tk.Tk):
