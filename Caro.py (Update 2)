@@ -24,27 +24,26 @@ class Board:
 
     def final_state(self, marked_row, marked_col):
         directions = [(1, 0), (0, 1), (1, 1), (1, -1)]  # Các hướng kiểm tra (dọc, ngang, chéo phải, chéo trái)
+        #update
+        player = self.squares[marked_row][marked_col]  # Player to check for winning condition
+        
         for dr, dc in directions:
             count = 0
-            block_count = 0
+            
             for delta in range(-self.max_item_win + 1, self.max_item_win):
                 r = marked_row + delta * dr
                 c = marked_col + delta * dc
                 #Update
                 if 0 <= r < self.size and 0 <= c < self.size:
-                    if self.squares[r][c] == self.squares[marked_row][marked_col]:
+                    #update
+                    if self.squares[r][c] == player:
                         count += 1
+                        if count == self.max_item_win:
+                            return player
                     else:
-                        if self.squares[r][c] != 0:
-                            block_count += 1
                         count = 0
-                    if count == self.max_item_win:
-                        if block_count < 2:
-                            return self.squares[marked_row][marked_col]
-                        else:
-                            count = 0
                 else:
-                    block_count += 1
+                    count = 0
         return 0
 
     def mark_sqr(self, row, col, player):
@@ -69,8 +68,7 @@ class AI:
     def __init__(self, player=2):
         self.player = player # Người chơi mà AI sẽ đóng vai
 
-    
-    
+
     #Minimax algorithm with Alpha–beta pruning
     def minimax(self, board, depth, alpha, beta, maximizing):
         if depth == 0 or board.is_full():
@@ -154,6 +152,7 @@ class AI:
 
     def eval(self, main_board):
         #Điều chỉnh kích thước (Update)
+        #Lưu ý: Nếu tăng depth cho if elif else tăng lên số thì nó sẽ bị tốc độ chậm và thoát ra bị lỗi đơ
         if main_board.size == 5:
             depth = 4
         elif main_board.size == 7:
@@ -239,9 +238,12 @@ class Game(tk.Tk):
             winner = "Người chơi 1" if result == 1 else "Người chơi 2"
             messagebox.showinfo("Kết quả", f"{winner} đã thắng")
             self.running = False
+            #return True
         elif self.board.is_full():
             messagebox.showinfo("Kết quả", "Hòa")
             self.running = False
+            #retrun True
+        #return False
 
 #Update handle_click
     def handle_click(self, event):
@@ -253,10 +255,10 @@ class Game(tk.Tk):
 
         if self.board.empty_sqr(row, col):
             self.make_move(row, col)
-            self.is_over(row, col)
-
-            if self.gamemode == 'ai' and self.running:
-                self.ai_turn()
+            #update
+            if not self.is_over(row, col):
+                if self.gamemode == 'ai' and self.running:
+                    self.after(500, self.ai_turn) ###
 
     def ai_turn(self):
         self.ai_thinking = True
