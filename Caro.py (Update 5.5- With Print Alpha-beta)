@@ -1,0 +1,314 @@
+import copy
+import numpy as np
+import random
+import tkinter as tk
+from tkinter import messagebox
+
+# --- Constants ---
+DEFAULT_WIDTH = 700     #Chiều rộng
+DEFAULT_HEIGHT = 700    #Chiều cao
+
+BG_COLOR = "#F5F5DC" # Beige background color
+LINE_COLOR = "#8B4513" # Dark Brown line color
+CIRC_COLOR = "#006400" # Dark Green circle (O) color
+CROSS_COLOR = "#8B0000" # Dark Red cross (X) color
+
+# Bảng caro
+class Board:
+    def __init__(self, size):
+        self.size = size
+        self.squares = np.zeros((size, size))  # Tạo bảng kích thước size x size với các ô giá trị 0
+        self.marked_sqrs = 0  # Số ô đã được đánh dấu
+        self.max_item_win = 3 if size == 5 else 5   # Số lượng ký hiệu cần để thắng (3 cho bàn 5x5, 5 cho các bàn khác)
+
+    def final_state(self, marked_row, marked_col):
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]  # Các hướng kiểm tra (dọc, ngang, chéo phải, chéo trái)
+        player = self.squares[marked_row][marked_col]  # Player to check for winning condition
+        
+        for dr, dc in directions:
+            count = 0
+            
+            for delta in range(-self.max_item_win + 1, self.max_item_win):
+                r = marked_row + delta * dr
+                c = marked_col + delta * dc
+                if 0 <= r < self.size and 0 <= c < self.size:
+                    if self.squares[r][c] == player:
+                        count += 1
+                        if count == self.max_item_win:
+                            return player
+                    else:
+                        count = 0
+                else:
+                    count = 0
+        return 0
+
+    def mark_sqr(self, row, col, player):
+        self.squares[row][col] = player
+        self.marked_sqrs += 1
+
+    def empty_sqr(self, row, col):
+        return self.squares[row][col] == 0
+
+    def get_empty_sqrs(self):
+        return [(r, c) for r in range(self.size) for c in range(self.size) if self.empty_sqr(r, c)]
+
+    def is_full(self):
+        return self.marked_sqrs == self.size * self.size
+
+    def longest_sequence(self, player):
+        longest = 0
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for row in range(self.size):
+            for col in range(self.size):
+                if self.squares[row][col] == player:
+                    for dr, dc in directions:
+                        count = 0
+                        for delta in range(-self.max_item_win + 1, self.max_item_win):
+                            r = row + delta * dr
+                            c = col + delta * dc
+                            if 0 <= r < self.size and 0 <= c < self.size and self.squares[r][c] == player:
+                                count += 1
+                                longest = max(longest, count)
+                            else:
+                                count = 0
+        return longest
+
+# Artificial Intelligence
+class AI:
+    def __init__(self, player=2):
+        self.player = player
+
+    def evaluate_board(self, board):
+        score = 0
+        for row in range(board.size):
+            for col in range(board.size):
+                if board.squares[row][col] == 1:
+                    score += self.evaluate_position(board, row, col, 1)
+                else:
+                    score -= self.evaluate_position(board, row, col, 2)
+        return score
+
+    def evaluate_position(self, board, row, col, player):
+        score = 0
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        for dr, dc in directions:
+            count = 0
+            block_count = 0
+            potential_double = False
+            for delta in range(-3, 4):
+                r = row + delta * dr
+                c = col + delta * dc
+                if 0 <= r < board.size and 0 <= c < board.size:
+                    if board.squares[r][c] == player:
+                        count += 1
+                        if count >= 2:
+                            potential_double = True
+                    elif board.squares[r][c] != 0:
+                        block_count += 1
+                        break
+                    else:
+                        break
+                else:
+                    block_count += 1
+                    break
+            if block_count < 2:
+                score += count
+                if potential_double:
+                    score += 5
+        return score
+
+    def minimax(self, board, depth, alpha, beta, maximizing):
+        if depth == 0 or board.is_full():
+            score = self.evaluate_board(board)
+            return score, None
+
+        best_move = None
+        empty_sqrs = board.get_empty_sqrs()
+        random.shuffle(empty_sqrs)  # Add randomness to the order of moves
+
+        if maximizing:
+            max_eval = -float('inf')
+            for (row, col) in empty_sqrs:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, 2)
+                eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, False)
+                print(f"Maximizing: Evaluating move at ({row}, {col}), Score: {eval}, Alpha: {alpha}, Beta: {beta}")
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = (row, col)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    print(f"Maximizing: Pruning at ({row}, {col}), Alpha: {alpha}, Beta: {beta}")
+                    break
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            for (row, col) in empty_sqrs:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, 1)
+                eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, True)
+                print(f"Minimizing: Evaluating move at ({row}, {col}), Score: {eval}, Alpha: {alpha}, Beta: {beta}")
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = (row, col)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    print(f"Minimizing: Pruning at ({row}, {col}), Alpha: {alpha}, Beta: {beta}")
+                    break
+            return min_eval, best_move
+
+    def eval(self, main_board):
+        if main_board.size == 5:
+            depth = 4
+        elif main_board.size == 7:
+            depth = 3
+        else:
+            depth = 2
+
+        empty_sqrs = main_board.get_empty_sqrs()
+        random.shuffle(empty_sqrs)  # Add randomness to the order of moves
+
+        # Check if AI can win in the next move
+        for row, col in empty_sqrs:
+            temp_board = copy.deepcopy(main_board)
+            temp_board.mark_sqr(row, col, 2)
+            if temp_board.final_state(row, col) == 2:
+                print(f"AI Winning move at ({row}, {col})")
+                return (row, col)
+
+        # Block opponent's winning move
+        highest_threat = None
+        highest_threat_length = 0
+        for row, col in empty_sqrs:
+            temp_board = copy.deepcopy(main_board)
+            temp_board.mark_sqr(row, col, 1)
+            if temp_board.final_state(row, col) == 1:
+                print(f"Blocking opponent's winning move at ({row}, {col})")
+                return (row, col)
+            # Check for the longest sequence to block
+            threat_length = temp_board.longest_sequence(1)
+            if threat_length > highest_threat_length:
+                highest_threat_length = threat_length
+                highest_threat = (row, col)
+
+        if highest_threat:
+            print(f"Blocking highest threat at ({highest_threat[0]}, {highest_threat[1]})")
+            return highest_threat
+
+        eval_value, move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
+        print(f"Evaluated move: {move} with score: {eval_value}")
+        return move
+
+class Game(tk.Tk):
+    def __init__(self, size=5, gamemode='ai'):
+        super().__init__()
+        self.title("CARO CỔ ĐIỂN")
+        self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT + 100}")  # Increase height to accommodate buttons
+        self.canvas = tk.Canvas(self, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT, bg=BG_COLOR)
+        self.canvas.pack()
+
+        self.size = size
+        self.sqsize = DEFAULT_WIDTH // self.size  # Kích thước mỗi ô vuông trên bảng
+        self.radius = self.sqsize // 4 # Bán kính của dấu tròn (O)
+        self.offset = self.sqsize // 4  # Khoảng cách bù trừ cho việc vẽ dấu
+        self.line_width = self.offset // 2 # Độ dày của các đường kẻ
+        self.circ_width = self.offset // 2  # Độ dày của đường kẻ dấu tròn (O)
+        self.cross_width = self.offset // 2 # Độ dày của đường kẻ dấu chéo (X)
+
+        self.board = Board(self.size) # Tạo bảng chơi với kích thước được chỉ định
+        self.ai = AI() # Tạo đối tượng AI
+        self.player = 1 # Người chơi bắt đầu
+        self.gamemode = gamemode # Chế độ chơi (Player vs Player or Player vs A.I)
+        self.running = True # Trạng thái trò chơi đang chạy
+        self.ai_thinking = False  # Trạng thái AI đang suy nghĩ
+        self.show_lines() # Hiển thị các đường kẻ trên bảng
+        self.canvas.bind("<Button-1>", self.handle_click) # Ràng buộc sự kiện click chuột trên canvas
+
+        # Reset button and Back button
+        self.reset_button = tk.Button(self, text="Chơi lại", command=self.reset, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.reset_button.pack(side=tk.LEFT, padx=20, pady=20)
+
+        self.back_button = tk.Button(self, text="Trở về", command=self.back, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.back_button.pack(side=tk.RIGHT, padx=20, pady=20)
+
+    def show_lines(self):
+        self.canvas.delete("all")
+        for col in range(1, self.size):
+            x = col * self.sqsize
+            self.canvas.create_line(x, 0, x, DEFAULT_HEIGHT, fill=LINE_COLOR, width=self.line_width)
+        for row in range(1, self.size):
+            y = row * self.sqsize
+            self.canvas.create_line(0, y, DEFAULT_WIDTH, y, fill=LINE_COLOR, width=self.line_width)
+
+    def draw_fig(self, row, col):
+        if self.board.squares[row][col] == 1:
+            start_desc = (col * self.sqsize + self.offset, row * self.sqsize + self.offset)
+            end_desc = (col * self.sqsize + self.sqsize - self.offset, row * self.sqsize + self.sqsize - self.offset)
+            self.canvas.create_line(*start_desc, *end_desc, fill=CROSS_COLOR, width=self.cross_width)
+
+            start_asc = (col * self.sqsize + self.offset, row * self.sqsize + self.sqsize - self.offset)
+            end_asc = (col * self.sqsize + self.sqsize - self.offset, row * self.sqsize + self.offset)
+            self.canvas.create_line(*start_asc, *end_asc, fill=CROSS_COLOR, width=self.cross_width)
+        elif self.board.squares[row][col] == 2:
+            center = (col * self.sqsize + self.sqsize // 2, row * self.sqsize + self.sqsize // 2)
+            self.canvas.create_oval(center[0] - self.radius, center[1] - self.radius,
+                                    center[0] + self.radius, center[1] + self.radius,
+                                    outline=CIRC_COLOR, width=self.circ_width)
+
+    def make_move(self, row, col):
+        self.board.mark_sqr(row, col, self.player)
+        self.draw_fig(row, col)
+        self.next_turn()
+
+    def next_turn(self):
+        self.player = self.player % 2 + 1
+
+    def is_over(self, row, col):
+        result = self.board.final_state(row, col)
+        if result != 0:
+            winner = "Người chơi 1" if result == 1 else "Người chơi 2"
+            messagebox.showinfo("Kết quả", f"{winner} đã thắng")
+            self.running = False
+        elif self.board.is_full():
+            messagebox.showinfo("Kết quả", "Hòa")
+            self.running = False
+
+    def handle_click(self, event):
+        if not self.running:
+            return
+
+        col = event.x // self.sqsize
+        row = event.y // self.sqsize
+
+        if self.board.empty_sqr(row, col):
+            self.make_move(row, col)
+            self.is_over(row, col)
+
+            if self.gamemode == 'ai' and self.running:
+                self.ai_turn()
+
+    def ai_turn(self):
+        self.ai_thinking = True
+        move = self.ai.eval(self.board)
+        if move:
+            self.make_move(*move)
+            self.is_over(*move)
+        self.ai_thinking = False
+
+    def reset(self):
+        self.board = Board(self.size)
+        self.player = 1
+        self.running = True
+        self.ai_thinking = False
+        self.show_lines()
+
+    def back(self):
+        self.destroy()
+        import caro_menu  # Quay lại form menu
+        root = tk.Tk()
+        caro_menu.CaroUI(root)
+        root.mainloop()
+
+if __name__ == '__main__':
+    game = Game()
+    game.mainloop()
