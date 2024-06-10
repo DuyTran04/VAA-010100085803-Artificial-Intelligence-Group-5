@@ -20,7 +20,10 @@ class CaroUI:
         
         # Tiêu đề
         self.label = tk.Label(root, text="CHÀO MỪNG ĐẾN CỜ CARO", font=("Helvetica", 24, "bold"), fg=self.text_color, bg=self.bg_color)
-        self.label.pack(pady=20)
+        self.label.pack(pady=5)
+        
+        self.label = tk.Label(root, text="NHÓM 5", font=("Helvetica", 24, "bold"), fg=self.text_color, bg=self.bg_color)
+        self.label.pack(pady=5)
         
         # Chọn kích thước bàn cờ
         self.size_label = tk.Label(root, text="Chọn kích thước bàn cờ:", font=self.custom_font, fg=self.text_color, bg=self.bg_color)
