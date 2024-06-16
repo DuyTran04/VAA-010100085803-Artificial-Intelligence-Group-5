@@ -5,12 +5,12 @@ import tkinter as tk
 from tkinter import messagebox
 
 # --- Constants ---
-DEFAULT_WIDTH = 700     #Chiều rộng
-DEFAULT_HEIGHT = 700    #Chiều cao
+DEFAULT_WIDTH = 700     # Chiều rộng
+DEFAULT_HEIGHT = 700    # Chiều cao
 
-BG_COLOR = "#F5F5DC" # Beige background color
-LINE_COLOR = "#8B4513" # Dark Brown line color
-CIRC_COLOR = "#006400" # Dark Green circle (O) color
+BG_COLOR = "#F5F5DC"    # Beige background color
+LINE_COLOR = "#8B4513"  # Dark Brown line color
+CIRC_COLOR = "#006400"  # Dark Green circle (O) color
 CROSS_COLOR = "#8B0000" # Dark Red cross (X) color
 
 # Bảng caro
@@ -284,27 +284,22 @@ class Game(tk.Tk):
             winner = "Người chơi 1" if result == 1 else "Người chơi 2"
             messagebox.showinfo("Kết quả", f"{winner} đã thắng")
             self.running = False
-            #return True
         elif self.board.is_full():
             messagebox.showinfo("Kết quả", "Hòa")
             self.running = False
-            #retrun True
-        #return False
 
-#Update handle_click
     def handle_click(self, event):
-        if not self.running:
+        if not self.running or self.ai_thinking:
             return
 
         col = event.x // self.sqsize
         row = event.y // self.sqsize
 
-        if self.board.empty_sqr(row, col):
+        if self.board.empty_sqr(row, col) and self.player == 1:
             self.make_move(row, col)
-            #update
             if not self.is_over(row, col):
                 if self.gamemode == 'ai' and self.running:
-                    self.after(500, self.ai_turn) ###
+                    self.after(500, self.ai_turn) 
 
     def ai_turn(self):
         self.ai_thinking = True
