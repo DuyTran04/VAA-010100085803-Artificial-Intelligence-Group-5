@@ -76,25 +76,38 @@ class Board:
 # Artificial Intelligence
 class AI:
     def __init__(self, player=2):
+        # Khởi tạo đối tượng AI
+        # player: số đại diện cho người chơi, mặc định là 2 (thường dành cho AI)
         self.player = player
 
     def evaluate_board(self, board):
+        # Đánh giá toàn bộ bàn cờ
+        # Duyệt qua từng ô và tính toán điểm số dựa trên vị trí của các quân cờ
         score = 0
         for row in range(board.size):
             for col in range(board.size):
                 if board.squares[row][col] == 1:
-                    score += self.evaluate_position(board, row, col, 1)
-                else:
-                    score -= self.evaluate_position(board, row, col, 2)
+                    # Trừ điểm cho quân của đối thủ
+                    score -= self.evaluate_position(board, row, col, 1)
+                elif board.squares[row][col] == 2:
+                    # Cộng điểm cho quân của AI
+                    score += self.evaluate_position(board, row, col, 2)
         return score
 
     def evaluate_position(self, board, row, col, player):
+        # Đánh giá một vị trí cụ thể trên bàn cờ
+        # Tính toán điểm số dựa trên số lượng quân cờ liên tiếp và khả năng bị chặn
+
         score = 0
+        # Các hướng để kiểm tra: ngang, dọc, chéo xuống, chéo lên
         directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        
         for dr, dc in directions:
-            count = 0
-            block_count = 0
-            potential_double = False
+            count = 0  # Đếm số quân cờ liên tiếp
+            block_count = 0  # Đếm số đầu bị chặn
+            potential_double = False  # Kiểm tra khả năng tạo cặp
+
+            # Kiểm tra 7 ô liên tiếp (từ -3 đến 3)
             for delta in range(-3, 4):
                 r = row + delta * dr
                 c = col + delta * dc
@@ -104,56 +117,71 @@ class AI:
                         if count >= 2:
                             potential_double = True
                     elif board.squares[r][c] != 0:
+                        # Bị chặn bởi quân địch
                         block_count += 1
                         break
-                    else:
-                        break
                 else:
+                    # Ra ngoài bàn cờ cũng tính là bị chặn
                     block_count += 1
                     break
+            
             if block_count < 2:
+                # Nếu không bị chặn cả hai đầu, cộng điểm
                 score += count
                 if potential_double:
+                    # Thưởng thêm nếu có khả năng tạo cặp
                     score += 5
+
         return score
 
     def minimax(self, board, depth, alpha, beta, maximizing):
+        # Thuật toán minimax với cắt tỉa alpha-beta
+        # depth: độ sâu tìm kiếm
+        # alpha, beta: giới hạn trên và dưới cho cắt tỉa
+        # maximizing: True nếu là lượt của người chơi tối đa (AI), False nếu ngược lại
+
         if depth == 0 or board.is_full():
+            # Điều kiện dừng: đạt độ sâu 0 hoặc bàn cờ đã đầy
             score = self.evaluate_board(board)
             return score, None
 
         best_move = None
         empty_sqrs = board.get_empty_sqrs()
-        random.shuffle(empty_sqrs)  # Add randomness to the order of moves
+        random.shuffle(empty_sqrs)  # Tăng tính ngẫu nhiên
 
         if maximizing:
+            # Người chơi tối đa (AI)
             max_eval = -float('inf')
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, 2)
+                temp_board.mark_sqr(row, col, 2)  # Thử đánh một nước
                 eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, False)
                 if eval > max_eval:
                     max_eval = eval
                     best_move = (row, col)
                 alpha = max(alpha, eval)
                 if beta <= alpha:
-                    break
+                    break  # Cắt tỉa alpha
             return max_eval, best_move
         else:
+            # Người chơi tối thiểu (đối thủ)
             min_eval = float('inf')
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, 1)
+                temp_board.mark_sqr(row, col, 1)  # Thử đánh một nước
                 eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, True)
                 if eval < min_eval:
                     min_eval = eval
                     best_move = (row, col)
                 beta = min(beta, eval)
                 if beta <= alpha:
-                    break
+                    break  # Cắt tỉa beta
             return min_eval, best_move
 
     def eval(self, main_board):
+        # Phương thức chính để đánh giá và chọn nước đi tốt nhất
+
+        # Xác định độ sâu tìm kiếm dựa trên kích thước bàn cờ
         if main_board.size == 5:
             depth = 4
         elif main_board.size == 7:
@@ -162,54 +190,24 @@ class AI:
             depth = 2
 
         empty_sqrs = main_board.get_empty_sqrs()
-        random.shuffle(empty_sqrs)  # Add randomness to the order of moves
+        random.shuffle(empty_sqrs)
 
-        # Check if AI can win in the next move
+        # Kiểm tra xem AI có thể thắng ngay lập tức không
         for row, col in empty_sqrs:
             temp_board = copy.deepcopy(main_board)
             temp_board.mark_sqr(row, col, 2)
             if temp_board.final_state(row, col) == 2:
                 return (row, col)
 
-        # Block opponent's winning move
-        highest_threat = None
-        highest_threat_length = 0
+        # Kiểm tra và chặn nước đi thắng của đối thủ
         for row, col in empty_sqrs:
             temp_board = copy.deepcopy(main_board)
             temp_board.mark_sqr(row, col, 1)
             if temp_board.final_state(row, col) == 1:
                 return (row, col)
-            # Check for the longest sequence to block
-            threat_length = temp_board.longest_sequence(1)
-            if threat_length > highest_threat_length:
-                highest_threat_length = threat_length
-                highest_threat = (row, col)
 
-        if highest_threat:
-            return highest_threat
-
-        # Check proximity to existing pieces
-        def distance_to_closest_piece(row, col):
-            min_distance = float('inf')
-            for r in range(main_board.size):
-                for c in range(main_board.size):
-                    if main_board.squares[r][c] != 0:
-                        distance = abs(r - row) + abs(c - col)
-                        if distance < min_distance:
-                            min_distance = distance
-            return min_distance
-
-        # Prefer moves closer to existing pieces
-        best_move = None
-        best_proximity = float('inf')
-        eval_value, move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
-
-        for row, col in empty_sqrs:
-            proximity = distance_to_closest_piece(row, col)
-            if proximity < best_proximity:
-                best_proximity = proximity
-                best_move = (row, col)
-
+        # Sử dụng minimax với cắt tỉa alpha-beta
+        eval_value, best_move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
         return best_move
 
 
