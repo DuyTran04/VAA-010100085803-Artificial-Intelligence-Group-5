@@ -1,12 +1,12 @@
 import copy
-import numpy as np
 import random
+import numpy as np
 import tkinter as tk
 from tkinter import messagebox
 
 # --- Constants ---
-DEFAULT_WIDTH = 700     # Chiều rộng
-DEFAULT_HEIGHT = 700    # Chiều cao
+DEFAULT_WIDTH = 700     #Chiều rộng
+DEFAULT_HEIGHT = 700    #Chiều cao
 
 BG_COLOR = "#F5F5DC" # Beige background color
 LINE_COLOR = "#8B4513" # Dark Brown line color
@@ -72,7 +72,7 @@ class Board:
                             else:
                                 count = 0
         return longest
-
+    
 # Artificial Intelligence
 class AI:
     def __init__(self, player=2):
@@ -210,7 +210,6 @@ class AI:
         eval_value, best_move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
         return best_move
 
-
 class Game(tk.Tk):
     def __init__(self, size=5, gamemode='ai'):
         super().__init__()
@@ -244,6 +243,7 @@ class Game(tk.Tk):
         self.back_button.pack(side=tk.RIGHT, padx=20, pady=20)
 
     def show_lines(self):
+        # Hiển thị các đường kẻ trên bảng
         self.canvas.delete("all")
         for col in range(1, self.size):
             x = col * self.sqsize
@@ -253,6 +253,7 @@ class Game(tk.Tk):
             self.canvas.create_line(0, y, DEFAULT_WIDTH, y, fill=LINE_COLOR, width=self.line_width)
 
     def draw_fig(self, row, col):
+        # Vẽ ký hiệu X hoặc O
         if self.board.squares[row][col] == 1:
             start_desc = (col * self.sqsize + self.offset, row * self.sqsize + self.offset)
             end_desc = (col * self.sqsize + self.sqsize - self.offset, row * self.sqsize + self.sqsize - self.offset)
@@ -273,18 +274,24 @@ class Game(tk.Tk):
         self.next_turn()
 
     def next_turn(self):
+        # Chuyển lượt chơi
         self.player = self.player % 2 + 1
 
     def is_over(self, row, col):
+        # Kiểm tra trò chơi kết thúc hay chưa
         result = self.board.final_state(row, col)
         if result != 0:
             winner = "Người chơi 1" if result == 1 else "Người chơi 2"
             messagebox.showinfo("Kết quả", f"{winner} đã thắng")
             self.running = False
+            #return True
         elif self.board.is_full():
             messagebox.showinfo("Kết quả", "Hòa")
             self.running = False
+            #retrun True
+        #return False
 
+#Update handle_click
     def handle_click(self, event):
         if not self.running:
             return
@@ -294,10 +301,10 @@ class Game(tk.Tk):
 
         if self.board.empty_sqr(row, col):
             self.make_move(row, col)
-            self.is_over(row, col)
-
-            if self.gamemode == 'ai' and self.running:
-                self.ai_turn()
+            #update
+            if not self.is_over(row, col):
+                if self.gamemode == 'ai' and self.running:
+                    self.after(500, self.ai_turn) ###
 
     def ai_turn(self):
         self.ai_thinking = True
