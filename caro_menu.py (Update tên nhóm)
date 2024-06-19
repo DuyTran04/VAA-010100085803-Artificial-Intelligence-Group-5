@@ -6,7 +6,7 @@ class CaroUI:
     def __init__(self, root):
         self.root = root
         self.root.title("CARO CỔ ĐIỂN")
-        self.root.geometry("500x400") # Đặt kích thước cửa sổ
+        self.root.geometry("500x450") # Đặt kích thước cửa sổ
         
         # Định nghĩa màu sắc
         self.bg_color = "#F5F5DC"  # Beige background color
@@ -16,7 +16,7 @@ class CaroUI:
         
         self.root.configure(bg=self.bg_color) # Cấu hình màu nền của cửa sổ
 
-        self.custom_font = tkfont.Font(family="Helvetica", size=12, weight="bold") #Font-size tùy chỉnh
+        self.custom_font = tkfont.Font(family="Helvetica", size=17, weight="bold") #Font-size tùy chỉnh
         
         # Tiêu đề
         self.label = tk.Label(root, text="CHÀO MỪNG ĐẾN CỜ CARO", font=("Helvetica", 24, "bold"), fg=self.text_color, bg=self.bg_color)
