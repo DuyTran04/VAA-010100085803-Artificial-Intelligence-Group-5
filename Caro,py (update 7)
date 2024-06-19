@@ -77,119 +77,132 @@ class Board:
 # Lớp AI đại diện cho trí tuệ nhân tạo trong trò chơi Caro
 class AI:
     def __init__(self, player=2):
-        self.player = player  # Mặc định AI là người chơi thứ 2 (quân O)
+        self.player = player
+        self.opponent = 1
 
-    # Đánh giá tổng thể bàn cờ, trả về điểm số
     def evaluate_board(self, board):
         score = 0
+        if self.check_win(board, self.player):
+            score += 10000
+        if self.check_win(board, self.opponent):
+            score -= 10000
         for row in range(board.size):
             for col in range(board.size):
-                if board.squares[row][col] == 1:  # Nếu ô thuộc về người chơi
-                    score -= self.evaluate_position(board, row, col, 1)  # Trừ điểm
-                elif board.squares[row][col] == 2:  # Nếu ô thuộc về AI
-                    score += self.evaluate_position(board, row, col, 2)  # Cộng điểm
+                if board.squares[row][col] == self.player:
+                    score += self.evaluate_position(board, row, col, self.player)
+                elif board.squares[row][col] == self.opponent:
+                    score -= self.evaluate_position(board, row, col, self.opponent)
         return score
 
-    # Đánh giá một vị trí cụ thể trên bàn cờ
     def evaluate_position(self, board, row, col, player):
         score = 0
-        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]  # Các hướng: ngang, dọc, chéo xuống, chéo lên
-        
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
         for dr, dc in directions:
-            count = 0  # Đếm số quân liên tiếp
-            block_count = 0  # Đếm số đầu bị chặn
-            potential_double = False  # Khả năng tạo thành nước đôi
-
-            # Kiểm tra 7 ô xung quanh vị trí hiện tại (3 ô mỗi bên)
+            count = 0
+            block_count = 0
             for delta in range(-3, 4):
                 r = row + delta * dr
                 c = col + delta * dc
                 if 0 <= r < board.size and 0 <= c < board.size:
                     if board.squares[r][c] == player:
                         count += 1
-                        if count >= 2:
-                            potential_double = True
-                    elif board.squares[r][c] != 0:  # Nếu bị chặn bởi quân đối phương
+                    elif board.squares[r][c] != 0:
                         block_count += 1
                         break
-                else:  # Nếu vượt ra ngoài bàn cờ
+                else:
                     block_count += 1
                     break
-            
-            if block_count < 2:  # Nếu không bị chặn cả hai đầu
-                score += count
-                if potential_double:
-                    score += 5  # Thưởng thêm điểm cho khả năng tạo nước đôi
-
+            if block_count < 2:
+                score += count ** 2
         return score
 
-    # Thuật toán minimax với cắt tỉa alpha-beta
+    def check_win(self, board, player):
+        for row in range(board.size):
+            for col in range(board.size):
+                if board.squares[row][col] == player:
+                    if self.win_condition(board, row, col, player):
+                        return True
+        return False
+
+    def win_condition(self, board, row, col, player):
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for dr, dc in directions:
+            count = 0
+            for delta in range(-board.max_item_win + 1, board.max_item_win):
+                r = row + delta * dr
+                c = col + delta * dc
+                if 0 <= r < board.size and 0 <= c < board.size:
+                    if board.squares[r][c] == player:
+                        count += 1
+                        if count == board.max_item_win:
+                            return True
+                    else:
+                        count = 0
+        return False
+
     def minimax(self, board, depth, alpha, beta, maximizing):
         if depth == 0 or board.is_full():
-            score = self.evaluate_board(board)
-            return score, None
+            return self.evaluate_board(board), None
 
-        best_move = None
-        empty_sqrs = board.get_empty_sqrs()
-        random.shuffle(empty_sqrs)  # Xáo trộn các nước đi để tăng tính ngẫu nhiên
-
-        if maximizing:  # Lượt của AI (maximizer)
+        if maximizing:
             max_eval = -float('inf')
+            best_move = None
+            empty_sqrs = board.get_empty_sqrs()
+            random.shuffle(empty_sqrs)
+
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, 2)  # Thử đánh vào ô trống
+                temp_board.mark_sqr(row, col, self.player)
                 eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, False)
                 if eval > max_eval:
                     max_eval = eval
                     best_move = (row, col)
-                alpha = max(alpha, eval)
+                alpha = max(alpha, max_eval)
                 if beta <= alpha:
-                    break  # Cắt tỉa alpha
+                    break
             return max_eval, best_move
-        else:  # Lượt của người chơi (minimizer)
+
+        else:
             min_eval = float('inf')
+            best_move = None
+            empty_sqrs = board.get_empty_sqrs()
+            random.shuffle(empty_sqrs)
+
             for (row, col) in empty_sqrs:
                 temp_board = copy.deepcopy(board)
-                temp_board.mark_sqr(row, col, 1)  # Thử đánh vào ô trống
+                temp_board.mark_sqr(row, col, self.opponent)
                 eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, True)
                 if eval < min_eval:
                     min_eval = eval
                     best_move = (row, col)
-                beta = min(beta, eval)
+                beta = min(beta, min_eval)
                 if beta <= alpha:
-                    break  # Cắt tỉa beta
+                    break
             return min_eval, best_move
 
-    # Hàm chính để AI đánh giá và chọn nước đi
     def eval(self, main_board):
-        # Chọn độ sâu tìm kiếm dựa trên kích thước bàn cờ
-        if main_board.size == 5:
-            depth = 4
-        elif main_board.size == 7:
-            depth = 3
-        else:
-            depth = 2
-
+        depth = 2 if main_board.size > 7 else 3
         empty_sqrs = main_board.get_empty_sqrs()
         random.shuffle(empty_sqrs)
 
-        # Kiểm tra nước thắng ngay lập tức cho AI
+        max_empty_sqrs = 20  # Giới hạn số lượng ô trống được xét
+        empty_sqrs = empty_sqrs[:max_empty_sqrs]
+
         for row, col in empty_sqrs:
             temp_board = copy.deepcopy(main_board)
-            temp_board.mark_sqr(row, col, 2)
-            if temp_board.final_state(row, col) == 2:
+            temp_board.mark_sqr(row, col, self.player)
+            if temp_board.final_state(row, col) == self.player:
                 return (row, col)
 
-        # Kiểm tra và chặn nước thắng của đối thủ
         for row, col in empty_sqrs:
             temp_board = copy.deepcopy(main_board)
-            temp_board.mark_sqr(row, col, 1)
-            if temp_board.final_state(row, col) == 1:
+            temp_board.mark_sqr(row, col, self.opponent)
+            if temp_board.final_state(row, col) == self.opponent:
                 return (row, col)
 
-        # Sử dụng minimax với cắt tỉa alpha-beta để chọn nước đi tốt nhất
-        eval_value, best_move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
+        _, best_move = self.minimax(main_board, depth, -float('inf'), float('inf'), True)
         return best_move
+
 
 
 class Game(tk.Tk):
@@ -234,6 +247,17 @@ class Game(tk.Tk):
             y = row * self.sqsize
             self.canvas.create_line(0, y, DEFAULT_WIDTH, y, fill=LINE_COLOR, width=self.line_width)
 
+    def is_valid_move(self, row, col):
+        if not self.board.empty_sqr(row, col):
+            return False
+
+        for dr, dc in [(0, 1), (0, -1), (1, 0), (-1, 0), (1, 1), (-1, -1), (1, -1), (-1, 1)]:
+            r, c = row + dr, col + dc
+        if 0 <= r < self.size and 0 <= c < self.size and self.board.squares[r][c] != 0:
+            return True
+
+        return False
+
     def draw_fig(self, row, col):
         # Vẽ ký hiệu X hoặc O
         if self.board.squares[row][col] == 1:
@@ -277,11 +301,12 @@ class Game(tk.Tk):
         col = event.x // self.sqsize
         row = event.y // self.sqsize
 
-        if self.board.empty_sqr(row, col) and self.player == 1:
-            self.make_move(row, col)
+        if self.board.empty_sqr(row, col):
+            if self.gamemode == 'pvp' or self.player == 1:
+                self.make_move(row, col)
             if not self.is_over(row, col):
                 if self.gamemode == 'ai' and self.running:
-                    self.after(500, self.ai_turn) 
+                    self.after(500, self.ai_turn)
 
     def ai_turn(self):
         self.ai_thinking = True
