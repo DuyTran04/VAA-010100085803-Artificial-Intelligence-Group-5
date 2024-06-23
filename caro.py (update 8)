@@ -1,0 +1,520 @@
+import copy
+import random
+import numpy as np
+import tkinter as tk
+from tkinter import messagebox
+import time
+from functools import lru_cache
+
+# --- Constants ---
+DEFAULT_WIDTH = 700
+DEFAULT_HEIGHT = 700
+
+BG_COLOR = "#F5F5DC"
+LINE_COLOR = "#8B4513"
+CIRC_COLOR = "#006400"
+CROSS_COLOR = "#8B0000"
+
+class Board:
+    def __init__(self, size):
+        self.size = size
+        self.squares = np.zeros((size, size), dtype=int)
+        self.marked_sqrs = 0
+        self.max_item_win = 3 if size == 5 else 5
+
+    def final_state(self, marked_row, marked_col):
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        player = self.squares[marked_row][marked_col]
+
+        for dr, dc in directions:
+            count = 0
+            for delta in range(-self.max_item_win + 1, self.max_item_win):
+                r = marked_row + delta * dr
+                c = marked_col + delta * dc
+                if 0 <= r < self.size and 0 <= c < self.size:
+                    if self.squares[r][c] == player:
+                        count += 1
+                        if count == self.max_item_win:
+                            return player
+                    else:
+                        count = 0
+                else:
+                    count = 0
+        return 0
+
+    def mark_sqr(self, row, col, player):
+        self.squares[row][col] = player
+        self.marked_sqrs += 1
+
+    def empty_sqr(self, row, col):
+        return self.squares[row][col] == 0
+
+    def get_empty_sqrs(self):
+        return [(r, c) for r in range(self.size) for c in range(self.size) if self.empty_sqr(r, c)]
+
+    def is_full(self):
+        return self.marked_sqrs == self.size * self.size
+
+    def longest_sequence(self, player):
+        longest = 0
+        directions = [(1, 0), (0, 1), (1, 1), (1, -1)]
+        for row in range(self.size):
+            for col in range(self.size):
+                if self.squares[row][col] == player:
+                    for dr, dc in directions:
+                        count = 0
+                        for delta in range(-self.max_item_win + 1, self.max_item_win):
+                            r = row + delta * dr
+                            c = col + delta * dc
+                            if 0 <= r < self.size and 0 <= c < self.size and self.squares[r][c] == player:
+                                count += 1
+                                longest = max(longest, count)
+                            else:
+                                count = 0
+        return longest
+
+class AI:
+    def __init__(self, player=2):
+        self.player = player
+        self.opponent = 3 - player
+        self.max_time = 5  # Time limit for thinking (seconds)
+        self.evaluate_board = lru_cache(maxsize=10000)(self.evaluate_board)
+
+    def evaluate_board(self, board):
+        score = 0
+        player_longest = board.longest_sequence(self.player)
+        opponent_longest = board.longest_sequence(self.opponent)
+        
+        if player_longest == board.max_item_win:
+            return 10000
+        if opponent_longest == board.max_item_win:
+            return -10000
+        
+        score += self.evaluate_sequences(board, self.player)
+        score -= self.evaluate_sequences(board, self.opponent)
+        
+        # Add evaluation for potential future threats
+        score += self.evaluate_potential_threats(board, self.player)
+        score -= self.evaluate_potential_threats(board, self.opponent)
+        
+        return score
+
+    def evaluate_sequences(self, board, player):
+        score = 0
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        for row in range(board.size):
+            for col in range(board.size):
+                for dr, dc in directions:
+                    score += self.evaluate_direction(board, row, col, dr, dc, player)
+        return score
+
+    def evaluate_direction(self, board, row, col, dr, dc, player):
+        score = 0
+        max_win = board.max_item_win
+        line = []
+        for i in range(max_win):
+            r, c = row + i * dr, col + i * dc
+            if 0 <= r < board.size and 0 <= c < board.size:
+                line.append(board.squares[r][c])
+            else:
+                break
+        if len(line) >= max_win:
+            score += self.score_window(line, player, max_win)
+        return score
+
+    def score_window(self, window, player, max_win):
+        score = 0
+        opponent = 3 - player
+        
+        player_count = window.count(player)
+        opponent_count = window.count(opponent)
+        empty_count = window.count(0)
+        
+        if opponent_count == max_win - 1 and empty_count == 1:
+            score -= 2000  # Prioritize blocking opponent's winning move
+        elif player_count == max_win - 1 and empty_count == 1:
+            score += 1000
+        elif opponent_count == max_win - 2 and empty_count == 2:
+            score -= 500   # Prioritize blocking opponent's potential threats
+        elif player_count == max_win - 2 and empty_count == 2:
+            score += 100
+        elif player_count > 0 and opponent_count == 0:
+            score += 10 * player_count
+        elif opponent_count > 0 and player_count == 0:
+            score -= 15 * opponent_count
+        
+        return score
+
+    def evaluate_potential_threats(self, board, player):
+        score = 0
+        opponent = 3 - player
+        for row in range(board.size):
+            for col in range(board.size):
+                if board.squares[row][col] == 0:
+                    # Check if this empty square could lead to a future threat
+                    score += self.evaluate_future_threat(board, row, col, player)
+                    score -= self.evaluate_future_threat(board, row, col, opponent)
+        return score
+
+    def evaluate_future_threat(self, board, row, col, player):
+        score = 0
+        directions = [(0, 1), (1, 0), (1, 1), (1, -1)]
+        for dr, dc in directions:
+            line = self.get_line(board, row, col, dr, dc)
+            score += self.score_potential_threat(line, player, board.max_item_win)
+        return score
+
+    def get_line(self, board, row, col, dr, dc):
+        line = []
+        for i in range(-board.max_item_win + 1, board.max_item_win):
+            r, c = row + i * dr, col + i * dc
+            if 0 <= r < board.size and 0 <= c < board.size:
+                line.append(board.squares[r][c])
+            else:
+                break
+        return line
+
+    def score_potential_threat(self, line, player, max_win):
+        score = 0
+        opponent = 3 - player
+        player_count = line.count(player)
+        empty_count = line.count(0)
+        
+        if player_count == max_win - 2 and empty_count == 2:
+            score += 50  # Potential future threat
+        elif player_count == max_win - 3 and empty_count == 3:
+            score += 10  # Developing threat
+        
+        return score
+
+    def eval(self, main_board):
+        start_time = time.time()
+        depth = 3 if main_board.size > 7 else 4
+        empty_sqrs = main_board.get_empty_sqrs()
+        
+        if len(empty_sqrs) > main_board.size * main_board.size - 4:
+            return self.quick_eval(main_board, empty_sqrs)
+
+        random.shuffle(empty_sqrs)
+        max_empty_sqrs = min(20, len(empty_sqrs))
+        empty_sqrs = empty_sqrs[:max_empty_sqrs]
+
+        # Check for immediate winning moves
+        for row, col in empty_sqrs:
+            if self.is_winning_move(main_board, row, col, self.player):
+                return (row, col)
+
+        # Check for opponent's winning moves to block
+        for row, col in empty_sqrs:
+            if self.is_winning_move(main_board, row, col, self.opponent):
+                return (row, col)
+
+        # Check for horizontal and vertical threats
+        for direction in [(1, 0), (0, 1), (1, 1), (1, -1)]:
+            threat_move = self.check_straight_threat(main_board, self.opponent, direction)
+            if threat_move:
+                return threat_move
+
+        # Check for potential future threats
+        future_threat_move = self.check_future_threats(main_board, self.player)
+        if future_threat_move:
+            return future_threat_move
+
+        # Check for fork opportunities
+        fork_moves = self.check_fork(main_board, self.player)
+        if fork_moves:
+            return random.choice(fork_moves)
+
+        # Check for opponent's fork opportunities to block
+        opponent_fork_moves = self.check_fork(main_board, self.opponent)
+        if opponent_fork_moves:
+            return random.choice(opponent_fork_moves)
+
+        # Check for moves that create multiple winning opportunities
+        best_move = None
+        best_score = -float('inf')
+        for row, col in empty_sqrs:
+            score = self.evaluate_move(main_board, row, col)
+            if score > best_score:
+                best_score = score
+                best_move = (row, col)
+
+        if best_move:
+            return best_move
+
+        # If no good moves found, use minimax
+        _, best_move = self.minimax(main_board, depth, -float('inf'), float('inf'), True, start_time)
+        return best_move
+
+    def quick_eval(self, board, empty_sqrs):
+        center = board.size // 2
+        best_move = None
+        best_score = -float('inf')
+
+        for row, col in empty_sqrs:
+            score = -(abs(row - center) + abs(col - center))  # Prioritize moves near the center
+            if score > best_score:
+                best_score = score
+                best_move = (row, col)
+
+        return best_move
+
+    def is_winning_move(self, board, row, col, player):
+        temp_board = copy.deepcopy(board)
+        temp_board.mark_sqr(row, col, player)
+        return temp_board.final_state(row, col) == player
+
+    def creates_winning_opportunity(self, board, row, col, player):
+        temp_board = copy.deepcopy(board)
+        temp_board.mark_sqr(row, col, player)
+        for r, c in temp_board.get_empty_sqrs():
+            if self.is_winning_move(temp_board, r, c, player):
+                return True
+        return False
+
+    def check_straight_threat(self, board, player, direction):
+        opponent = 3 - player
+        for row in range(board.size):
+            for col in range(board.size):
+                if direction == (1, 0):  # Check rows
+                    line = board.squares[row, :]
+                elif direction == (0, 1):  # Check columns
+                    line = board.squares[:, col]
+                elif direction == (1, 1):  # Check main diagonals
+                    line = [board.squares[row + i, col + i] for i in range(min(board.size - row, board.size - col))]
+                elif direction == (1, -1):  # Check anti-diagonals
+                    line = [board.squares[row + i, col - i] for i in range(min(board.size - row, col + 1))]
+
+                if self.is_threat(line, opponent, board.max_item_win):
+                    for i, cell in enumerate(line):
+                        if cell == 0:
+                            if direction == (1, 0):
+                                return (row, col + i)
+                            elif direction == (0, 1):
+                                return (row + i, col)
+                            elif direction == (1, 1):
+                                return (row + i, col + i)
+                            elif direction == (1, -1):
+                                return (row + i, col - i)
+        return None
+
+    def is_threat(self, line, player, max_win):
+        count = 0
+        for cell in line:
+            if cell == player:
+                count += 1
+            elif cell == 0:
+                if count == max_win - 1:
+                    return True
+                count = 0
+            else:
+                count = 0
+        return False
+
+    def check_fork(self, board, player):
+        empty_sqrs = board.get_empty_sqrs()
+        fork_moves = []
+        for row, col in empty_sqrs:
+            winning_directions = 0
+            for dr, dc in [(0, 1), (1, 0), (1, 1), (1, -1)]:
+                if self.check_direction(board, row, col, dr, dc, player):
+                    winning_directions += 1
+            if winning_directions >= 2:
+                fork_moves.append((row, col))
+        return fork_moves
+
+    def check_direction(self, board, row, col, dr, dc, player):
+        count = 0
+        for i in range(1, board.max_item_win):
+            r, c = row + i * dr, col + i * dc
+            if 0 <= r < board.size and 0 <= c < board.size:
+                if board.squares[r][c] == player:
+                    count += 1
+                elif board.squares[r][c] == 0:
+                    continue
+                else:
+                    break
+            else:
+                break
+        return count == board.max_item_win - 1
+
+    def evaluate_move(self, board, row, col):
+        temp_board = copy.deepcopy(board)
+        temp_board.mark_sqr(row, col, self.player)
+        return self.evaluate_board(temp_board)
+
+    def check_future_threats(self, board, player):
+        best_move = None
+        best_score = -float('inf')
+        for row in range(board.size):
+            for col in range(board.size):
+                if board.empty_sqr(row, col):
+                    score = self.evaluate_future_threat(board, row, col, player)
+                    if score > best_score:
+                        best_score = score
+                        best_move = (row, col)
+        return best_move if best_score > 0 else None
+    
+    def iterative_deepening(self, board, max_depth, max_time):
+        best_move = None
+        start_time = time.time()
+        for depth in range(1, max_depth + 1):
+            if time.time() - start_time > max_time:
+                break
+            score, move = self.minimax(board, depth, -float('inf'), float('inf'), True, start_time)
+            if move:
+                best_move = move
+        return best_move
+
+    def minimax(self, board, depth, alpha, beta, maximizing, start_time):
+        if depth == 0 or board.is_full() or time.time() - start_time > self.max_time:
+            return self.evaluate_board(board), None
+
+        if maximizing:
+            max_eval = -float('inf')
+            best_move = None
+            empty_sqrs = board.get_empty_sqrs()
+            random.shuffle(empty_sqrs)
+
+            for (row, col) in empty_sqrs:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, self.player)
+                eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, False, start_time)
+                if eval > max_eval:
+                    max_eval = eval
+                    best_move = (row, col)
+                alpha = max(alpha, eval)
+                if beta <= alpha:
+                    break
+            return max_eval, best_move
+        else:
+            min_eval = float('inf')
+            best_move = None
+            empty_sqrs = board.get_empty_sqrs()
+            random.shuffle(empty_sqrs)
+
+            for (row, col) in empty_sqrs:
+                temp_board = copy.deepcopy(board)
+                temp_board.mark_sqr(row, col, self.opponent)
+                eval, _ = self.minimax(temp_board, depth - 1, alpha, beta, True, start_time)
+                if eval < min_eval:
+                    min_eval = eval
+                    best_move = (row, col)
+                beta = min(beta, eval)
+                if beta <= alpha:
+                    break
+            return min_eval, best_move
+
+
+class Game(tk.Tk):
+    def __init__(self, size=5, gamemode='ai'):
+        super().__init__()
+        self.title("CARO CỔ ĐIỂN")
+        self.geometry(f"{DEFAULT_WIDTH}x{DEFAULT_HEIGHT + 100}")
+        self.canvas = tk.Canvas(self, width=DEFAULT_WIDTH, height=DEFAULT_HEIGHT, bg=BG_COLOR)
+        self.canvas.pack()
+
+        self.size = size
+        self.sqsize = DEFAULT_WIDTH // self.size
+        self.radius = self.sqsize // 4
+        self.offset = self.sqsize // 4
+        self.line_width = self.offset // 2
+        self.circ_width = self.offset // 2
+        self.cross_width = self.offset // 2
+
+        self.board = Board(self.size)
+        self.ai = AI()
+        self.player = 1
+        self.gamemode = gamemode
+        self.running = True
+        self.ai_thinking = False
+        self.show_lines()
+        self.canvas.bind("<Button-1>", self.handle_click)
+
+        self.reset_button = tk.Button(self, text="Chơi lại", command=self.reset, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.reset_button.pack(side=tk.LEFT, padx=20, pady=20)
+
+        self.back_button = tk.Button(self, text="Trở về", command=self.back, font=("Times New Roman", 16, "bold"), padx=20, pady=10)
+        self.back_button.pack(side=tk.RIGHT, padx=20, pady=20)
+
+    def show_lines(self):
+        self.canvas.delete("all")
+        for col in range(1, self.size):
+            x = col * self.sqsize
+            self.canvas.create_line(x, 0, x, DEFAULT_HEIGHT, fill=LINE_COLOR, width=self.line_width)
+        for row in range(1, self.size):
+            y = row * self.sqsize
+            self.canvas.create_line(0, y, DEFAULT_WIDTH, y, fill=LINE_COLOR, width=self.line_width)
+
+    def draw_fig(self, row, col):
+        if self.board.squares[row][col] == 1:
+            start_desc = (col * self.sqsize + self.offset, row * self.sqsize + self.offset)
+            end_desc = (col * self.sqsize + self.sqsize - self.offset, row * self.sqsize + self.sqsize - self.offset)
+            self.canvas.create_line(*start_desc, *end_desc, fill=CROSS_COLOR, width=self.cross_width)
+
+            start_asc = (col * self.sqsize + self.offset, row * self.sqsize + self.sqsize - self.offset)
+            end_asc = (col * self.sqsize + self.sqsize - self.offset, row * self.sqsize + self.offset)
+            self.canvas.create_line(*start_asc, *end_asc, fill=CROSS_COLOR, width=self.cross_width)
+        elif self.board.squares[row][col] == 2:
+            center = (col * self.sqsize + self.sqsize // 2, row * self.sqsize + self.sqsize // 2)
+            self.canvas.create_oval(center[0] - self.radius, center[1] - self.radius,
+                                    center[0] + self.radius, center[1] + self.radius,
+                                    outline=CIRC_COLOR, width=self.circ_width)
+
+    def make_move(self, row, col):
+        self.board.mark_sqr(row, col, self.player)
+        self.draw_fig(row, col)
+        self.next_turn()
+
+    def next_turn(self):
+        self.player = self.player % 2 + 1
+
+    def is_over(self, row, col):
+        result = self.board.final_state(row, col)
+        if result != 0:
+            winner = "Người chơi 1" if result == 1 else "Người chơi 2"
+            messagebox.showinfo("Kết quả", f"{winner} đã thắng")
+            self.running = False
+        elif self.board.is_full():
+            messagebox.showinfo("Kết quả", "Hòa")
+            self.running = False
+
+    def handle_click(self, event):
+        if not self.running or self.ai_thinking:
+            return
+
+        col = event.x // self.sqsize
+        row = event.y // self.sqsize
+
+        if self.board.empty_sqr(row, col):
+            if self.gamemode == 'pvp' or self.player == 1:
+                self.make_move(row, col)
+            if not self.is_over(row, col):
+                if self.gamemode == 'ai' and self.running:
+                    self.after(500, self.ai_turn)
+
+    def ai_turn(self):
+        self.ai_thinking = True
+        move = self.ai.eval(self.board)
+        if move:
+            self.make_move(*move)
+            self.is_over(*move)
+        self.ai_thinking = False
+
+    def reset(self):
+        self.board = Board(self.size)
+        self.player = 1
+        self.running = True
+        self.ai_thinking = False
+        self.show_lines()
+
+    def back(self):
+        self.destroy()
+        import caro_menu
+        root = tk.Tk()
+        caro_menu.CaroUI(root)
+        root.mainloop()
+
+if __name__ == '__main__':
+    game = Game()
+    game.mainloop()
