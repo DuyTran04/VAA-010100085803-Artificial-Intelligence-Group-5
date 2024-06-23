@@ -73,6 +73,9 @@ class Board:
                                 count = 0
         return longest
 
+import time
+from functools import lru_cache
+
 class AI:
     def __init__(self, player=2):
         self.player = player
