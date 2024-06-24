@@ -406,7 +406,7 @@ class Game(tk.Tk):
         self.back_button.pack(side=tk.RIGHT, padx=20, pady=20)
 
         # Status label
-        self.status_label = tk.Label(self, text="", font=("Times New Roman", 25))
+        self.status_label = tk.Label(self, text="", font=("Times New Roman", 20))
         self.status_label.pack(pady=10)
 
     # Hiển thị các đường kẻ trên bảng
@@ -538,11 +538,21 @@ class Game(tk.Tk):
         self.ai_thinking = False
 
     def reset(self):
-        self.board = Board(self.size) # Khởi tạo lại bàn cờ
-        self.running = True # Bắt đầu trò chơi mới
+        self.board = Board(self.size)  # Khởi tạo lại bàn cờ
+        self.running = True  # Bắt đầu trò chơi mới
         self.ai_thinking = False
-        self.show_lines() # Vẽ lại lưới
-        self.status_label.config(text="Bắt đầu trò chơi mới") # Status label
+        self.player = 1  # Đặt lại người chơi về người chơi 1
+        self.show_lines()  # Vẽ lại lưới
+        self.status_label.config(text="Bắt đầu trò chơi mới. Lượt của Người chơi 1")  # Cập nhật status label
+        self.canvas.delete("all")  # Xóa tất cả các phần tử trên canvas
+        self.show_lines()  # Vẽ lại lưới
+        self.board.winning_line = None  # Đặt lại đường thắng
+    
+        # Nếu đang ở chế độ AI và AI đi trước (người chơi 2), thực hiện nước đi của AI
+        if self.gamemode == 'ai' and self.player == 2:
+            self.after(100, self.ai_turn)
+    
+        self.update()  # Cập nhật giao diện
 
     def back(self):
         self.destroy() # Đóng cửa sổ hiện tại
