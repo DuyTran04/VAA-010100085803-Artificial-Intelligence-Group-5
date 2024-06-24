@@ -3,7 +3,7 @@ CARO CỔ ĐIỂN
 
 
 
-TRẠNG THÁI:GẦN HOÀN THOÀNH (99%) 
+TRẠNG THÁI: GẦN HOÀN THÀNH (99%) 
 
 ĐÃ HOÀN THÀNH: GIAO DIỆN, CHỨC NĂNG , PLAYER VS PLAYER , PLAYER VS A.I, TẠO ĐƯỜNG GẠCH KẺ ĐƯỜNG THẮNG NƯỚC
 
